@@ -2,26 +2,12 @@ const yearTarget = document.querySelector("#year");
 const revealItems = document.querySelectorAll(".reveal");
 const counters = document.querySelectorAll(".counter");
 const tiltCards = document.querySelectorAll(".tilt-card");
-const typingTarget = document.querySelector("#typing-target");
-const profileFrame = document.querySelector("#profile-frame");
-const profilePhoto = document.querySelector("#profile-photo");
-const cursorAura = document.querySelector(".cursor-aura");
 const logoIcons = document.querySelectorAll(".tech-icon--logo");
+const navLinks = document.querySelectorAll(".site-nav a");
+const sectionTargets = document.querySelectorAll("main section[id]");
 
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear().toString();
-}
-
-if (profileFrame && profilePhoto) {
-  const showProfile = () => profileFrame.classList.add("has-image");
-  const hideProfile = () => profileFrame.classList.remove("has-image");
-
-  profilePhoto.addEventListener("load", showProfile);
-  profilePhoto.addEventListener("error", hideProfile);
-
-  if (profilePhoto.complete && profilePhoto.naturalWidth > 0) {
-    showProfile();
-  }
 }
 
 logoIcons.forEach((icon) => {
@@ -104,50 +90,9 @@ function animateCounter(counter) {
   requestAnimationFrame(updateValue);
 }
 
-const typingWords = [
-  "full-stack learner",
-  "React and Node.js builder",
-  "AI-curious problem solver",
-  "future computer scientist",
-];
-
-if (typingTarget) {
-  let wordIndex = 0;
-  let charIndex = 0;
-  let isDeleting = false;
-
-  const typeLoop = () => {
-    const currentWord = typingWords[wordIndex];
-
-    if (isDeleting) {
-      charIndex -= 1;
-    } else {
-      charIndex += 1;
-    }
-
-    typingTarget.textContent = currentWord.slice(0, charIndex);
-
-    let timeout = isDeleting ? 40 : 75;
-
-    if (!isDeleting && charIndex === currentWord.length) {
-      timeout = 1200;
-      isDeleting = true;
-    } else if (isDeleting && charIndex === 0) {
-      isDeleting = false;
-      wordIndex = (wordIndex + 1) % typingWords.length;
-      timeout = 240;
-    }
-
-    window.setTimeout(typeLoop, timeout);
-  };
-
-  typeLoop();
-}
-
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const finePointer = window.matchMedia("(pointer: fine)").matches;
 
-if (!reduceMotion && finePointer) {
+if (!reduceMotion) {
   tiltCards.forEach((card) => {
     card.addEventListener("pointermove", (event) => {
       const rect = card.getBoundingClientRect();
@@ -164,45 +109,36 @@ if (!reduceMotion && finePointer) {
       card.style.transform = "";
     });
   });
+}
 
-  if (cursorAura) {
-    const state = {
-      mouseX: window.innerWidth / 2,
-      mouseY: window.innerHeight / 2,
-      auraX: window.innerWidth / 2,
-      auraY: window.innerHeight / 2,
-    };
+function setActiveLink(id) {
+  navLinks.forEach((link) => {
+    const active = link.getAttribute("href") === `#${id}`;
+    link.classList.toggle("is-active", active);
+    if (active) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
+}
 
-    const activateCursor = () => {
-      cursorAura.style.opacity = "1";
-    };
+if ("IntersectionObserver" in window && sectionTargets.length && navLinks.length) {
+  const navObserver = new IntersectionObserver(
+    (entries) => {
+      const visibleEntry = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
 
-    const deactivateCursor = () => {
-      cursorAura.style.opacity = "0";
-      cursorAura.classList.remove("is-active");
-    };
+      if (visibleEntry?.target?.id) {
+        setActiveLink(visibleEntry.target.id);
+      }
+    },
+    {
+      rootMargin: "-20% 0px -60% 0px",
+      threshold: [0.2, 0.45, 0.7],
+    }
+  );
 
-    document.addEventListener("mousemove", (event) => {
-      state.mouseX = event.clientX;
-      state.mouseY = event.clientY;
-      activateCursor();
-    });
-
-    document.addEventListener("mouseleave", deactivateCursor);
-
-    document.querySelectorAll("a, button, .tilt-card, .tech-chip").forEach((element) => {
-      element.addEventListener("mouseenter", () => cursorAura.classList.add("is-active"));
-      element.addEventListener("mouseleave", () => cursorAura.classList.remove("is-active"));
-    });
-
-    const renderCursor = () => {
-      state.auraX += (state.mouseX - state.auraX) * 0.14;
-      state.auraY += (state.mouseY - state.auraY) * 0.14;
-      cursorAura.style.left = `${state.auraX}px`;
-      cursorAura.style.top = `${state.auraY}px`;
-      requestAnimationFrame(renderCursor);
-    };
-
-    renderCursor();
-  }
+  sectionTargets.forEach((section) => navObserver.observe(section));
 }
